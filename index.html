@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Piroquinha FC – Draft</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<script>
+/* ====================================================================
+   CONFIGURAÇÃO DO FIREBASE
+   Cole aqui o firebaseConfig do seu projeto (veja o passo a passo).
+   Enquanto estiver vazio, o site funciona só neste aparelho (modo teste).
+   ==================================================================== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBqTpbDtUwEfiv9eZm9lhjjwFPxm93koEA",
+  authDomain: "piroquinha-fc.firebaseapp.com",
+  databaseURL: "https://piroquinha-fc-default-rtdb.firebaseio.com",
+  projectId: "piroquinha-fc",
+  storageBucket: "piroquinha-fc.firebasestorage.app",
+  messagingSenderId: "21867129516",
+  appId: "1:21867129516:web:b27ccedf59b81fecdd4d09"
+};
+</script>
+<style>
+  :root{--bg:#0f3d2a;--bg2:#14513a;--card:#fbfaf5;--ink:#1b1f1c;--muted:#6b7068;--line:#e3e1d8;--accent:#f5c518;--accent-ink:#2a2200;--danger:#c4432f;--ok:#2f8a4c}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:repeating-linear-gradient(90deg,var(--bg) 0 60px,var(--bg2) 60px 120px);min-height:100vh;padding:14px 12px 70px}
+  .wrap{max-width:760px;margin:0 auto}
+  .top{color:#fff;text-align:center;padding:6px 0 14px}
+  h1{font-family:'Archivo Black',sans-serif;font-size:1.9rem;margin:0;text-transform:uppercase}
+  h1 span{color:var(--accent)}
+  .badge{display:inline-block;margin-top:8px;font-size:.78rem;font-weight:700;background:rgba(0,0,0,.28);padding:4px 10px;border-radius:99px}
+  .card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+  .card h2{font-size:.95rem;margin:0 0 10px;text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .card h2 small{font-weight:600;color:var(--muted);text-transform:none;letter-spacing:0;font-size:.82rem}
+  textarea,input.txt{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;background:#fff}
+  textarea{min-height:120px}
+  button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:10px 14px;cursor:pointer;background:#e9e7de;color:var(--ink)}
+  button.primary{background:var(--accent);color:var(--accent-ink)}
+  button.big{width:100%;font-size:1.05rem;padding:15px;font-family:'Archivo Black',sans-serif;text-transform:uppercase}
+  button.ghost{background:transparent;color:var(--muted);padding:6px 8px;font-weight:600}
+  button.wh{color:#fff}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+  .row>.grow{flex:1}
+  .hint{font-size:.8rem;color:var(--muted);margin:8px 0 0;line-height:1.4}
+  .note{background:#fff7d6;border:1px solid #f0dc8a;border-radius:10px;padding:10px;font-size:.84rem;line-height:1.4;margin-bottom:12px}
+  table{width:100%;border-collapse:collapse}
+  td{padding:6px 2px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  td.nm{font-weight:600}
+  input.sc{width:64px;padding:7px;border:1px solid var(--line);border-radius:8px;font:inherit;text-align:center}
+  .crown{background:#fff;border:1.5px solid var(--line);padding:5px 8px;font-size:.95rem;filter:grayscale(1);opacity:.5}
+  .crown.on{filter:none;opacity:1;border-color:var(--accent);background:#fff7d6}
+  .del{color:var(--danger);background:none;padding:4px 6px}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .opt label{display:block;font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:4px}
+  .stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}
+  .stepper button{border-radius:0;padding:9px 14px;background:#f1efe7}
+  .stepper span{flex:1;text-align:center;font-weight:700;font-size:1.05rem}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center}
+  .stat b{display:block;font-size:1.2rem}
+  .stat span{font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase}
+  .turn{border-radius:14px;padding:14px;color:#fff;text-align:center;margin-bottom:12px;box-shadow:0 6px 18px rgba(0,0,0,.2)}
+  .turn small{display:block;opacity:.92;font-weight:600}
+  .turn strong{display:block;font-family:'Archivo Black',sans-serif;font-size:1.35rem;text-transform:uppercase;margin:2px 0}
+  .turn.mine{animation:pulse 1.2s ease-in-out 3}
+  @keyframes pulse{50%{transform:scale(1.03)}}
+  .teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .team{border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#fff}
+  .team.now{outline:3px solid var(--accent)}
+  .team .hd{padding:8px 10px;color:#fff}
+  .team .hd strong{display:block;font-size:.86rem;text-transform:uppercase;font-family:'Archivo Black',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .team .hd em{font-style:normal;font-size:.75rem;opacity:.95}
+  .bar{height:6px;background:#eee;position:relative}
+  .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--ok)}
+  .bar i.over{background:var(--danger)}
+  .team ol{margin:0;padding:6px 10px 8px 28px;font-size:.88rem}
+  .team li{padding:2px 0;font-weight:600}
+  .team li span{color:var(--muted);font-weight:600;font-size:.78rem;margin-left:3px}
+  .st{font-size:.72rem;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(255,255,255,.25);margin-left:4px}
+  .avail{list-style:none;margin:0;padding:0}
+  .avail li{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .avail li:last-child{border-bottom:0}
+  .avail .nm{flex:1;font-weight:600}
+  .pill{font-weight:700;background:#f1efe7;border-radius:7px;padding:3px 8px;font-size:.9rem;min-width:44px;text-align:center}
+  .pick.confirm{background:var(--danger);color:#fff}
+  .who{display:grid;gap:8px}
+  .who button{color:#fff;padding:14px;font-size:1rem}
+  .sel li{cursor:pointer;border-radius:8px;padding:8px 6px}
+  .sel li.on{background:#fff3c4;outline:2px solid var(--accent)}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .cols h3{font-size:.8rem;margin:0 0 4px;text-transform:uppercase;color:var(--muted)}
+  .preview{border-radius:10px;padding:10px;margin-top:10px;font-size:.9rem;line-height:1.45;background:#f1efe7}
+  .preview.ok{background:#e3f3e8}.preview.bad{background:#fbe5e1}
+  .sug{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:6px;background:#fff;font-size:.88rem;cursor:pointer}
+  .sug .l{flex:1;font-weight:600}
+  .tag{font-size:.72rem;font-weight:700;padding:2px 7px;border-radius:5px;background:#e3f3e8;color:var(--ok);white-space:nowrap}
+  .tag.part{background:#fff3d6;color:#9a6b00}
+  .log{font-size:.84rem;color:var(--muted);margin:0;padding-left:18px}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(80px);background:#111;color:#fff;padding:10px 16px;border-radius:10px;font-weight:600;transition:.25s;opacity:0;z-index:9;max-width:90vw;text-align:center}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+  .center{text-align:center;color:var(--muted);padding:10px 0}
+  .code{font-family:'Archivo Black',sans-serif;font-size:1.6rem;letter-spacing:3px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>Piroquinha <span>FC</span></h1>
+    <div style="font-weight:700;opacity:.85;letter-spacing:1px;text-transform:uppercase;font-size:.8rem;margin-top:2px">Draft da pelada</div>
+    <div class="badge" id="mode">Carregando…</div>
+  </div>
+  <div id="app"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const COLORS=['#d4a106','#2a62c9','#c4432f','#222222'];
+const EMO=['🟡','🔵','🔴','⚫'];
+const ONLINE=!!(FIREBASE_CONFIG.databaseURL&&FIREBASE_CONFIG.apiKey);
+const blank=()=>({v:1,phase:'setup',admin:'',players:[],nTeams:3,margin:1,captains:[],order:[],teams:[],pickNo:0,seats:{},trades:[],updatedAt:0});
+
+/* ---------- utils ---------- */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>(Math.round(n*10)/10).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+const clone=o=>JSON.parse(JSON.stringify(o));
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2400)}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+let ME=ls.get('dp-me');if(!ME){ME='c'+Math.random().toString(36).slice(2,11);ls.set('dp-me',ME)}
+
+/* ---------- state ---------- */
+let code=null, ref=null, state=null, loaded=false, lastTurnMine=false;
+let pendingPick=null,pendingTimer=null, selA=null, selB=null, watching=false;
+
+function arr(x){if(Array.isArray(x))return x.filter(v=>v!=null);if(x&&typeof x==='object')return Object.keys(x).sort((a,b)=>a-b).map(k=>x[k]).filter(v=>v!=null);return []}
+function norm(d){
+  const s=Object.assign(blank(),d||{});
+  s.players=arr(s.players);s.captains=arr(s.captains);s.order=arr(s.order);s.teams=arr(s.teams).map(arr);s.trades=arr(s.trades);
+  s.seats=(s.seats&&typeof s.seats==='object'&&!Array.isArray(s.seats))?s.seats:{};
+  return s;
+}
+function withState(s,fn){const save=state;state=s;try{return fn()}finally{state=save}}
+
+/* ---------- storage layer ---------- */
+let db=null;
+function commit(mut){
+  if(!state)return;
+  if(!ONLINE){
+    const s=norm(clone(state));withState(s,()=>mut(s));s.updatedAt=Date.now();
+    state=s;ls.set('dp-local',JSON.stringify(s));render();return Promise.resolve(true);
+  }
+  return ref.transaction(cur=>{
+    if(cur===null)return cur;
+    const s=norm(cur);withState(s,()=>mut(s));s.updatedAt=Date.now();return s;
+  }).then(r=>r.committed).catch(e=>{toast('Não salvou, confira a internet');return false});
+}
+
+/* ---------- derived ---------- */
+const P=id=>state.players.find(p=>p.id===id);
+const isAdmin=()=>!ONLINE||state.admin===ME;
+const total=()=>state.players.reduce((s,p)=>s+p.score,0);
+const capAvg=()=>state.players.length?total()/state.nTeams:0;
+const sumT=t=>t.reduce((s,id)=>s+(P(id)?.score||0),0);
+const capOf=i=>state.players.length?total()*state.teams[i].length/state.players.length:0;
+const totalPicks=()=>state.players.length-state.nTeams;
+function teamForPick(k){const T=state.nTeams,r=Math.floor(k/T),p=k%T;return r%2===0?state.order[p]:state.order[T-1-p]}
+const teamName=i=>'Time do '+(P(state.captains[i])?.name||'?');
+const picked=()=>new Set(state.teams.flat());
+const seatOf=i=>state.seats['t'+i];
+const myTeam=()=>{for(let i=0;i<state.captains.length;i++)if(seatOf(i)===ME)return i;return -1};
+const canAct=i=>isAdmin()||seatOf(i)===ME;
+
+function overTeams(){
+  return state.teams.map((t,i)=>({i,ex:sumT(t)-capOf(i)-state.margin})).filter(o=>o.ex>1e-9).sort((a,b)=>b.ex-a.ex);
+}
+// quem escolhe a troca: o time com a menor nota (em relação ao seu teto)
+function chooser(){
+  let best=-1,bv=Infinity;
+  state.teams.forEach((t,i)=>{const v=sumT(t)-capOf(i);if(v<bv-1e-9){bv=v;best=i}});
+  return best;
+}
+// valida troca: a sai do time acima (i) e vai pro time baixo (j); b faz o caminho inverso
+function evalSwap(i,j,a,b){
+  const d=P(a).score-P(b).score;const si=sumT(state.teams[i]),sj=sumT(state.teams[j]);
+  const ci=capOf(i),cj=capOf(j),m=state.margin;
+  const ni=si-d,nj=sj+d;
+  let err=null;
+  if(d<=1e-9)err='Assim o time de cima não perde nota. Pegue alguém com nota maior do que quem você manda.';
+  else if(nj>cj+m+1e-9)err=`Seu time ficaria com ${fmt(nj)}, acima do limite de ${fmt(cj+m)}. Pegue alguém com nota menor.`;
+  return {ni,nj,ok:!err&&ni<=ci+m+1e-9,err};
+}
+function suggestions(i,j){
+  const caps=new Set(state.captains);const out=[];
+  for(const a of state.teams[i]){if(caps.has(a))continue;
+    for(const b of state.teams[j]){if(caps.has(b))continue;
+      const r=evalSwap(i,j,a,b);if(r.err)continue;
+      out.push({a,b,...r,dev:Math.max(Math.abs(r.ni-capOf(i)),Math.abs(r.nj-capOf(j)))});
+    }}
+  out.sort((x,y)=>(y.ok-x.ok)||(x.dev-y.dev));
+  return out.slice(0,6);
+}
+
+/* ---------- parsing ---------- */
+function parseList(txt){
+  const out=[];
+  for(let l of txt.split(/\n/)){
+    l=l.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu,'').replace(/^\s*\d+\s*[\.\)\-–:]\s*/,'').trim();
+    if(!l)continue;
+    let score=null;const m=l.match(/(\d+(?:[.,]\d+)?)\s*(?:pts?|pontos)?\s*$/i);
+    if(m){score=parseFloat(m[1].replace(',','.'));l=l.slice(0,m.index)}
+    const name=l.replace(/[\s\-–:|=•*·]+$/,'').replace(/^[\s\-–•*·]+/,'').trim();
+    if(!name)continue;
+    out.push({name,score:score??5,noScore:score==null});
+  }
+  return out;
+}
+
+/* ---------- render ---------- */
+function setMode(){
+  if(!ONLINE){$('mode').textContent='🧪 Modo teste – só neste aparelho';return}
+  if(!code){$('mode').textContent='🟢 Online';return}
+  const t=state?myTeam():-1;
+  $('mode').textContent=`Draft ${code} · `+(state&&isAdmin()?'você é o organizador':(t>=0?'você: '+teamName(t):'assistindo'));
+}
+function teamCards(hl){
+  return `<div class="teams">${state.teams.map((t,i)=>{
+    const s=sumT(t),c=state.phase==='draft'?capAvg():capOf(i);const over=s>c+state.margin+1e-9;
+    const pct=Math.min(100,c?s/c*100:0);
+    const st=state.phase==='draft'?'':(over?'<span class="st">acima</span>':(s<c-1e-9?'<span class="st">abaixo</span>':'<span class="st">ok</span>'));
+    return `<div class="team ${hl===i?'now':''}">
+      <div class="hd" style="background:${COLORS[i]}"><strong>${esc(teamName(i))}</strong><em>${fmt(s)} / ${fmt(c)} · ${t.length} jog.</em>${st}</div>
+      <div class="bar"><i class="${over?'over':''}" style="width:${pct}%"></i></div>
+      <ol>${t.map(id=>`<li>${id===state.captains[i]?'👑 ':''}${esc(P(id).name)}<span>${fmt(P(id).score)}</span></li>`).join('')}</ol>
+    </div>`}).join('')}</div>`;
+}
+function shareBox(){
+  if(!ONLINE||!isAdmin())return '';
+  const url=location.href.split('#')[0]+'#'+code;
+  const msg=`⚽ Draft do Piroquinha FC! Entra aqui e toca no seu nome: ${url}`;
+  return `<div class="card"><h2>Link pros capitães <small>código ${code}</small></h2>
+    <input class="txt" readonly value="${esc(url)}">
+    <div class="row"><button class="primary grow" data-a="share">Mandar no WhatsApp</button><button data-a="copylink">Copiar link</button></div>
+    <p class="hint">Quem abrir o link toca no próprio nome e pronto, sem conta nenhuma. Você, como organizador, pode escolher por qualquer time se alguém sumir.</p>
+    <a id="walink" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener" style="display:none"></a></div>`;
+}
+function whoBox(){
+  if(!ONLINE||isAdmin()||state.captains.length!==state.nTeams)return '';
+  const t=myTeam();
+  if(t>=0)return `<div class="row" style="justify-content:center;margin:-4px 0 10px"><button class="ghost wh" data-a="unseat">Não sou ${esc(P(state.captains[t]).name)}? Trocar</button></div>`;
+  if(watching)return `<div class="row" style="justify-content:center;margin:-4px 0 10px"><button class="ghost wh" data-a="unwatch">Sou capitão, quero escolher</button></div>`;
+  return `<div class="card"><h2>Quem é você?</h2><div class="who">${state.captains.map((id,i)=>{
+      const taken=seatOf(i)&&seatOf(i)!==ME;
+      return `<button data-a="seat" data-i="${i}" style="background:${COLORS[i]}" ${taken?'disabled':''}>👑 ${esc(P(id).name)}${taken?' (já entrou)':''}</button>`}).join('')}
+    <button data-a="watch">Só vou assistir</button></div></div>`;
+}
+
+function render(){
+  setMode();
+  const a=$('app');
+  if(!code){a.innerHTML=renderHome();return}
+  if(!loaded){a.innerHTML='<div class="card center">Carregando draft…</div>';return}
+  if(!state){a.innerHTML=`<div class="card center">Draft <b>${esc(code)}</b> não encontrado.<div class="row" style="justify-content:center"><button class="primary" data-a="home">Voltar</button></div></div>`;return}
+  const ph=state.phase;
+  a.innerHTML=ph==='setup'?renderSetup():ph==='draft'?renderDraft():ph==='trade'?renderTrade():renderDone();
+  notifyTurn();
+}
+function notifyTurn(){
+  let mine=false;
+  if(state.phase==='draft')mine=seatOf(teamForPick(state.pickNo))===ME;
+  else if(state.phase==='trade'&&overTeams().length)mine=seatOf(chooser())===ME;
+  if(mine&&!lastTurnMine){try{navigator.vibrate&&navigator.vibrate([150,80,150])}catch(e){}}
+  document.title=mine?'🔔 Sua vez! – Piroquinha FC':'Piroquinha FC – Draft';
+  lastTurnMine=mine;
+}
+
+function renderHome(){
+  const mine=(ls.get('dp-mine')||'').split(',').filter(Boolean).slice(-3).reverse();
+  return `<div class="card"><h2>Novo draft</h2><p class="hint" style="margin-top:0">Você vira o organizador: monta a lista do dia e manda o link pros capitães.</p>
+    <div class="row"><button class="primary big" data-a="create">Criar draft</button></div></div>
+  <div class="card"><h2>Entrar num draft</h2><div class="row" style="margin-top:0"><input class="txt grow" id="joincode" placeholder="Código (ex: K7PX)" maxlength="6" style="text-transform:uppercase;flex:1"><button class="primary" data-a="join">Entrar</button></div></div>
+  ${mine.length?`<div class="card"><h2>Seus últimos drafts</h2><div class="row" style="margin-top:0">${mine.map(c=>`<button data-a="goto" data-c="${c}">${c}</button>`).join('')}</div></div>`:''}`;
+}
+
+function renderSetup(){
+  if(!isAdmin()){
+    return `<div class="turn" style="background:#333"><small>Draft ${code}</small><strong>Montando a lista</strong><small>O organizador está colocando os jogadores e as notas…</small></div>
+      ${whoBox()}
+      ${state.players.length?`<div class="card"><h2>Jogadores <small>${state.players.length}</small></h2><ul class="avail">${state.players.slice().sort((a,b)=>b.score-a.score).map(p=>`<li><span class="nm">${state.captains.includes(p.id)?'👑 ':''}${esc(p.name)}</span><span class="pill">${fmt(p.score)}</span></li>`).join('')}</ul></div>`:''}`;
+  }
+  const n=state.players.length,T=state.nTeams,caps=new Set(state.captains);
+  const ready=n>=T*2&&state.captains.length===T;
+  return `${shareBox()}
+  <div class="card">
+    <h2>Lista do dia</h2>
+    <textarea id="paste" placeholder="Um jogador por linha, com a nota no final:&#10;João 7,5&#10;Pedrinho - 6&#10;3. Carlos 8 ✅"></textarea>
+    <div class="row"><button class="primary" data-a="load">${n?'Substituir lista':'Carregar lista'}</button>${n?'<button data-a="append">Adicionar à lista</button>':''}</div>
+    <p class="hint">Pode colar direto do WhatsApp: números da lista e emojis são ignorados. A nota é o último número da linha (aceita vírgula).</p>
+  </div>
+  ${n?`<div class="card">
+    <h2>Jogadores <small>${n} na lista</small></h2>
+    <table>${state.players.map(p=>`<tr data-id="${p.id}">
+      <td><button class="crown ${caps.has(p.id)?'on':''}" data-a="cap" title="Capitão">👑</button></td>
+      <td class="nm">${esc(p.name)}${p.noScore?' <span class="tag part">sem nota</span>':''}</td>
+      <td style="text-align:right"><input class="sc" type="number" step="0.5" min="0" inputmode="decimal" value="${p.score}" data-a="score"></td>
+      <td style="text-align:right"><button class="del" data-a="del">✕</button></td></tr>`).join('')}</table>
+    <div class="stats">
+      <div class="stat"><b>${fmt(total())}</b><span>Soma total</span></div>
+      <div class="stat"><b>${fmt(capAvg())}</b><span>Teto por time</span></div>
+      <div class="stat"><b>${n%T?Math.floor(n/T)+'–'+Math.ceil(n/T):n/T}</b><span>Jog. por time</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Regras</h2>
+    <div class="opts">
+      <div class="opt"><label>Times</label><div class="stepper"><button data-a="nt" data-d="-1">−</button><span>${T}</span><button data-a="nt" data-d="1">+</button></div></div>
+      <div class="opt"><label>Margem acima do teto</label><div class="stepper"><button data-a="mg" data-d="-0.5">−</button><span>${fmt(state.margin)}</span><button data-a="mg" data-d="0.5">+</button></div></div>
+    </div>
+    <p class="hint">Teto = soma total ÷ ${T} = <b>${fmt(capAvg())}</b>. No fim do draft, se um time passar de <b>${fmt(capAvg()+state.margin)}</b>, o capitão do time com a <b>menor nota</b> escolhe uma troca com ele.</p>
+  </div>
+  <div class="card">
+    <h2>Capitães <small>${state.captains.length}/${T}</small></h2>
+    <p class="hint" style="margin-top:0">${state.captains.length?state.captains.map((id,i)=>'👑 '+esc(P(id)?.name)+(ONLINE&&seatOf(i)?' ✅':'')).join(' · '):'Sorteie ou toque na 👑 ao lado dos nomes.'}</p>
+    ${ONLINE&&state.captains.length===T?'<p class="hint">✅ = capitão já entrou pelo link.</p>':''}
+    <div class="row"><button class="primary" data-a="drawcap">🎲 Sortear ${T} capitães</button></div>
+  </div>
+  <button class="primary big" data-a="start" ${ready?'':'disabled'}>⚽ Começar draft</button>`:''}`;
+}
+
+function renderDraft(){
+  const k=state.pickNo,ti=teamForPick(k),used=picked();
+  const avail=state.players.filter(p=>!used.has(p.id)).sort((a,b)=>b.score-a.score);
+  const act=canAct(ti),mine=seatOf(ti)===ME;
+  const ordem=state.order.map((i,x)=>`${x+1}º ${esc(P(state.captains[i]).name)}`).join(' → ');
+  const sub=mine?'É a sua vez! Escolha um jogador':(act?`Escolhendo pelo ${esc(teamName(ti))}`:`Aguardando ${esc(P(state.captains[ti]).name)} escolher…`);
+  return `
+  <div class="turn ${mine?'mine':''}" style="background:${COLORS[ti]}">
+    <small>Escolha ${k+1} de ${totalPicks()}</small>
+    <strong>${mine?'Sua vez!':'Vez do '+esc(teamName(ti))}</strong>
+    <small>${sub}</small>
+  </div>
+  ${whoBox()}
+  <div class="card"><h2>Times <small>soma / teto</small></h2>${teamCards(ti)}
+    <p class="hint">Ordem (snake): ${ordem}, depois volta ao contrário.</p></div>
+  <div class="card"><h2>Disponíveis <small>${avail.length}</small></h2>
+    <ul class="avail">${avail.map(p=>`<li><span class="nm">${esc(p.name)}</span><span class="pill">${fmt(p.score)}</span>
+      ${act?`<button class="pick ${pendingPick===p.id?'confirm':'primary'}" data-a="pick" data-id="${p.id}">${pendingPick===p.id?'Confirmar':'Escolher'}</button>`:''}</li>`).join('')}</ul>
+  </div>
+  ${isAdmin()?`${shareBox()}<div class="row" style="justify-content:space-between">${k>0?'<button class="ghost wh" data-a="undo">↶ Desfazer última escolha</button>':'<span></span>'}<button class="ghost wh" data-a="reset">Voltar pra lista</button></div>`:''}`;
+}
+
+function renderTrade(){
+  const ov=overTeams();
+  if(!ov.length)return renderDone();
+  const i=ov[0].i,j=chooser(),act=canAct(j),mine=seatOf(j)===ME;
+  const caps=new Set(state.captains);
+  const si=sumT(state.teams[i]),ci=capOf(i);
+  if(selA&&!state.teams[i].includes(selA))selA=null;
+  if(selB&&!state.teams[j].includes(selB))selB=null;
+  let preview='';
+  if(selA&&selB){const r=evalSwap(i,j,selA,selB);
+    preview=r.err?`<div class="preview bad">⚠️ ${r.err}</div>`:
+      `<div class="preview ${r.ok?'ok':''}">${esc(teamName(i))} fica com <b>${fmt(r.ni)}</b> · ${mine?'seu time':esc(teamName(j))} fica com <b>${fmt(r.nj)}</b><br>${r.ok?'✅ Resolve: ninguém fica acima do limite.':'Melhora, mas o '+esc(teamName(i))+' ainda fica acima. Vai ter outra troca depois.'}
+       <div class="row"><button class="primary grow" data-a="doswap">Confirmar troca</button></div></div>`;
+  }
+  const sug=act?suggestions(i,j):[];
+  return `
+  <div class="turn ${mine?'mine':''}" style="background:${COLORS[j]}">
+    <small>Hora da troca · ${esc(teamName(i))} passou do limite (${fmt(si)} / ${fmt(ci+state.margin)})</small>
+    <strong>${mine?'Você escolhe a troca!':esc(P(state.captains[j]).name)+' escolhe a troca'}</strong>
+    <small>${mine?'Seu time tem a menor nota: pegue um do '+esc(teamName(i))+' e mande um seu':(act?'Escolhendo pelo '+esc(teamName(j)):'Time com a menor nota escolhe. Aguardando…')}</small>
+  </div>
+  ${whoBox()}
+  <div class="card"><h2>Times</h2>${teamCards(j)}</div>
+  ${act?`<div class="card"><h2>Montar a troca</h2>
+    <div class="cols">
+      <div><h3>Pegar do ${esc(teamName(i))}</h3><ul class="avail sel">${state.teams[i].filter(id=>!caps.has(id)).map(id=>`<li class="${selA===id?'on':''}" data-a="selA" data-id="${id}"><span class="nm">${esc(P(id).name)}</span><span class="pill">${fmt(P(id).score)}</span></li>`).join('')}</ul></div>
+      <div><h3>Mandar do ${mine?'seu time':esc(teamName(j))}</h3><ul class="avail sel">${state.teams[j].filter(id=>!caps.has(id)).map(id=>`<li class="${selB===id?'on':''}" data-a="selB" data-id="${id}"><span class="nm">${esc(P(id).name)}</span><span class="pill">${fmt(P(id).score)}</span></li>`).join('')}</ul></div>
+    </div>
+    ${preview||'<p class="hint">Toque num jogador de cada lado. Capitães não entram na troca.</p>'}
+  </div>
+  ${sug.length?`<div class="card"><h2>Sugestões <small>toque pra preencher</small></h2>${sug.map(o=>`<div class="sug" data-a="usesug" data-x="${o.a}" data-y="${o.b}"><span class="l">Pega ${esc(P(o.a).name)} (${fmt(P(o.a).score)}) ⇄ manda ${esc(P(o.b).name)} (${fmt(P(o.b).score)})</span>${o.ok?'<span class="tag">resolve</span>':'<span class="tag part">melhora</span>'}</div>`).join('')}</div>`:
+   '<div class="card"><p class="hint" style="margin:0">Nenhuma troca válida entre esses dois times. O organizador pode fechar os times assim.</p></div>'}`:''}
+  ${state.trades.length?`<div class="card"><h2>Trocas feitas</h2><ol class="log">${state.trades.map(t=>`<li>${esc(t)}</li>`).join('')}</ol></div>`:''}
+  ${isAdmin()?`<div class="row" style="justify-content:space-between">${state.trades.length?'<span></span>':'<button class="ghost wh" data-a="undo">↶ Desfazer última escolha</button>'}<button class="ghost wh" data-a="finish">Fechar times assim</button></div>`:''}`;
+}
+
+function renderDone(){
+  return `
+  <div class="turn" style="background:var(--ok)"><small>Draft encerrado</small><strong>Times fechados!</strong><small>${state.trades.length?state.trades.length+' troca'+(state.trades.length>1?'s':''):'Sem trocas'} · margem ${fmt(state.margin)}</small></div>
+  <div class="card"><h2>Times finais</h2>${teamCards(-1)}</div>
+  ${state.trades.length?`<div class="card"><h2>Trocas feitas</h2><ol class="log">${state.trades.map(t=>`<li>${esc(t)}</li>`).join('')}</ol></div>`:''}
+  <button class="primary big" data-a="copy">Copiar pro WhatsApp</button>
+  ${isAdmin()?`<div class="row" style="justify-content:center"><button class="ghost wh" data-a="new">Nova pelada (manter lista e notas)</button></div>`:''}`;
+}
+
+/* ---------- actions ---------- */
+function startDraft(s){
+  s.order=shuffle([...Array(s.nTeams).keys()]);
+  s.teams=s.captains.map(id=>[id]);
+  s.pickNo=0;s.trades=[];s.phase='draft';
+}
+function afterLastPick(s){s.phase=withState(s,()=>overTeams().length)?'trade':'done'}
+function resultText(){
+  let txt=`⚽ *Piroquinha FC – times de ${new Date().toLocaleDateString('pt-BR')}*\n`;
+  state.teams.forEach((t,i)=>{
+    txt+=`\n${EMO[i]} *${teamName(i)}* (${fmt(sumT(t))})\n`;
+    t.forEach((id,x)=>txt+=`${x+1}. ${P(id).name}${id===state.captains[i]?' 👑':''}\n`);
+  });
+  return txt;
+}
+function copy(txt,okMsg){
+  const ok=()=>toast(okMsg);
+  const fb=()=>{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');ok()}catch(e){toast('Não deu pra copiar')}ta.remove()};
+  try{navigator.clipboard.writeText(txt).then(ok).catch(fb)}catch(e){fb()}
+}
+function genCode(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<4;i++)c+=A[Math.floor(Math.random()*A.length)];return c}
+function rememberMine(c){const l=(ls.get('dp-mine')||'').split(',').filter(x=>x&&x!==c);l.push(c);ls.set('dp-mine',l.slice(-5).join(','))}
+
+async function createDraft(){
+  if(!ONLINE)return;
+  let c=genCode();
+  try{
+    for(let t=0;t<5;t++){const ex=await db.ref('drafts/'+c).get();if(!ex.exists())break;c=genCode()}
+    const s=blank();s.admin=ME;s.updatedAt=Date.now();
+    // reaproveita a última lista do organizador
+    const last=ls.get('dp-lastlist');if(last){try{s.players=JSON.parse(last)}catch(e){}}
+    await db.ref('drafts/'+c).set(s);
+    rememberMine(c);location.hash=c;
+  }catch(e){toast('Não consegui criar. Confira a configuração do Firebase.')}
+}
+
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-a]');if(!el)return;
+  const a=el.dataset.a;const row=el.closest('tr');const pid=row?.dataset.id;
+  if(a==='create')return createDraft();
+  if(a==='join'){const c=($('joincode').value||'').trim().toUpperCase();if(c)location.hash=c;return}
+  if(a==='goto'){location.hash=el.dataset.c;return}
+  if(a==='home'){location.hash='';return}
+  if(a==='share'){const w=$('walink');if(w)w.click();return}
+  if(a==='copylink'){copy(location.href.split('#')[0]+'#'+code,'Link copiado');return}
+  if(a==='watch'){watching=true;render();return}
+  if(a==='unwatch'){watching=false;render();return}
+  if(a==='copy'){copy(resultText(),'Copiado! É só colar no grupo');return}
+  if(a==='selA'){selA=selA===el.dataset.id?null:el.dataset.id;render();return}
+  if(a==='selB'){selB=selB===el.dataset.id?null:el.dataset.id;render();return}
+  if(a==='usesug'){selA=el.dataset.x;selB=el.dataset.y;render();return}
+
+  if(a==='load'||a==='append'){
+    const list=parseList($('paste').value);if(!list.length){toast('Cola a lista com nome e nota');return}
+    commit(s=>{
+      if(a==='load'){s.players=[];s.captains=[];s.seats={}}
+      const names=new Set(s.players.map(p=>p.name.toLowerCase()));
+      list.forEach(p=>{if(names.has(p.name.toLowerCase()))return;names.add(p.name.toLowerCase());s.players.push({id:'p'+Math.random().toString(36).slice(2,9),name:p.name,score:p.score,noScore:p.noScore})});
+    }).then(()=>ls.set('dp-lastlist',JSON.stringify(state.players)));
+    const miss=list.filter(p=>p.noScore).length;
+    toast(`${list.length} jogadores carregados`+(miss?` · ${miss} sem nota (ficou 5)`:''));
+  }
+  else if(a==='del')commit(s=>{s.players=s.players.filter(p=>p.id!==pid);s.captains=s.captains.filter(c=>c!==pid);s.seats={}});
+  else if(a==='cap')commit(s=>{
+    if(s.captains.includes(pid))s.captains=s.captains.filter(c=>c!==pid);
+    else if(s.captains.length<s.nTeams)s.captains.push(pid);
+    s.seats={};
+  });
+  else if(a==='nt')commit(s=>{s.nTeams=Math.min(4,Math.max(2,s.nTeams+ +el.dataset.d));s.captains=s.captains.slice(0,s.nTeams);s.seats={}});
+  else if(a==='mg')commit(s=>{s.margin=Math.max(0,Math.round((s.margin+ +el.dataset.d)*10)/10)});
+  else if(a==='drawcap'){if(state.players.length<state.nTeams){toast('Poucos jogadores');return}
+    commit(s=>{s.captains=shuffle(s.players.map(p=>p.id)).slice(0,s.nTeams);s.seats={}});toast('Capitães sorteados!')}
+  else if(a==='start'){ls.set('dp-lastlist',JSON.stringify(state.players));commit(startDraft)}
+  else if(a==='seat'){
+    const i=el.dataset.i;watching=false;
+    commit(s=>{const k='t'+i;if(s.seats[k]&&s.seats[k]!==ME)return;for(const x in s.seats)if(s.seats[x]===ME)delete s.seats[x];s.seats[k]=ME})
+      .then(()=>{if(seatOf(+i)!==ME)toast('Esse capitão já entrou em outro celular');});
+  }
+  else if(a==='unseat')commit(s=>{for(const x in s.seats)if(s.seats[x]===ME)delete s.seats[x]});
+  else if(a==='pick'){
+    const id=el.dataset.id;
+    if(pendingPick!==id){pendingPick=id;clearTimeout(pendingTimer);pendingTimer=setTimeout(()=>{pendingPick=null;render()},4000);render();return}
+    pendingPick=null;clearTimeout(pendingTimer);
+    const k=state.pickNo;
+    commit(s=>{
+      if(s.phase!=='draft'||s.pickNo!==k||s.teams.flat().includes(id))return;
+      const t=teamForPick(k);if(!(s.admin===ME||!ONLINE||s.seats['t'+t]===ME))return;
+      s.teams[t].push(id);s.pickNo++;
+      if(s.pickNo>=s.players.length-s.nTeams)afterLastPick(s);
+    });
+  }
+  else if(a==='undo'){
+    if(!state.pickNo)return;
+    commit(s=>{const k=s.pickNo-1;const t=s.teams[teamForPick(k)];if(t.length>1)t.pop();s.pickNo=k;s.phase='draft'});
+  }
+  else if(a==='doswap'){
+    const ov=overTeams();if(!ov.length||!selA||!selB)return;
+    const i=ov[0].i,j=chooser();const r=evalSwap(i,j,selA,selB);if(r.err)return;
+    const A=selA,B=selB;
+    const msg=`${P(state.captains[j]).name} pegou ${P(A).name} (${fmt(P(A).score)}) do ${teamName(i)} e mandou ${P(B).name} (${fmt(P(B).score)})`;
+    selA=selB=null;
+    commit(s=>{
+      const ov2=overTeams();if(!ov2.length||ov2[0].i!==i||chooser()!==j)return;
+      const ti=s.teams[i],tj=s.teams[j];const ia=ti.indexOf(A),ib=tj.indexOf(B);if(ia<0||ib<0)return;
+      ti[ia]=B;tj[ib]=A;s.trades.push(msg);
+      if(!overTeams().length)s.phase='done';
+    });
+    toast('Troca feita!');
+  }
+  else if(a==='finish')commit(s=>{s.phase='done'});
+  else if(a==='new')commit(s=>{s.phase='setup';s.captains=[];s.teams=[];s.order=[];s.pickNo=0;s.trades=[];s.seats={}});
+  else if(a==='reset'){
+    if(el.dataset.c){commit(s=>{s.phase='setup';s.teams=[];s.order=[];s.pickNo=0;s.trades=[]});return}
+    el.dataset.c='1';el.textContent='Toque de novo pra confirmar';setTimeout(()=>{if(el.isConnected){el.textContent='Voltar pra lista';delete el.dataset.c}},3000);
+  }
+});
+document.addEventListener('change',e=>{
+  if(e.target.dataset.a!=='score')return;
+  const pid=e.target.closest('tr').dataset.id;const v=parseFloat(String(e.target.value).replace(',','.'));
+  if(isNaN(v)||v<0){render();return}
+  commit(s=>{const p=s.players.find(x=>x.id===pid);p.score=v;p.noScore=false}).then(()=>ls.set('dp-lastlist',JSON.stringify(state.players)));
+});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='joincode'){const c=e.target.value.trim().toUpperCase();if(c)location.hash=c}});
+
+/* ---------- routing / boot ---------- */
+let unsub=null;
+function route(){
+  const h=decodeURIComponent(location.hash.replace('#','')).trim().toUpperCase();
+  if(unsub){unsub();unsub=null}
+  selA=selB=null;pendingPick=null;watching=false;lastTurnMine=false;
+  if(!ONLINE){
+    code='TESTE';loaded=true;
+    try{state=norm(JSON.parse(ls.get('dp-local')))}catch(e){state=null}
+    if(!state||!state.v){state=blank()}
+    render();return;
+  }
+  code=h||null;loaded=false;state=null;render();
+  if(!code)return;
+  ref=db.ref('drafts/'+code);
+  const cb=snap=>{loaded=true;state=snap.exists()?norm(snap.val()):null;if(state&&state.admin===ME)rememberMine(code);render()};
+  ref.on('value',cb,err=>{loaded=true;state=null;toast('Sem acesso ao banco. Confira as regras do Firebase.');render()});
+  unsub=()=>ref.off('value',cb);
+}
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+(async()=>{
+  if(ONLINE){
+    try{
+      await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+      await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js');
+      firebase.initializeApp(FIREBASE_CONFIG);db=firebase.database();
+    }catch(e){$('app').innerHTML='<div class="card center">Não consegui carregar o Firebase. Confira a internet e recarregue.</div>';return}
+  }
+  window.addEventListener('hashchange',route);
+  route();
+})();
+</script>
+</body>
+</html>
