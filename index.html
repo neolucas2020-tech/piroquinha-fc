@@ -174,25 +174,47 @@ const seatOf=i=>state.seats['t'+i];
 const myTeam=()=>{for(let i=0;i<state.captains.length;i++)if(seatOf(i)===ME)return i;return -1};
 const canAct=i=>isAdmin()||seatOf(i)===ME;
 
-function overTeams(){
-  return state.teams.map((t,i)=>({i,ex:sumT(t)-capOf(i)-state.margin})).filter(o=>o.ex>1e-9).sort((a,b)=>b.ex-a.ex);
+// passo das notas: 1 se todas são inteiras, 0,5 se usam meio ponto, senão 0,1
+function gran(){
+  const sc=state.players.map(p=>p.score);
+  if(sc.every(x=>Math.abs(x-Math.round(x))<1e-9))return 1;
+  if(sc.every(x=>Math.abs(x*2-Math.round(x*2))<1e-9))return 0.5;
+  return 0.1;
 }
-// quem escolhe a troca: o time com a menor nota (em relação ao seu teto)
+const r1=x=>Math.round(x*100)/100;
+// faixa aceitável de cada time: o mais perto possível da meta (soma ÷ times)
+// meta 19 → só 19 · meta 19,3 → 19 ou 20
+function lo(i){const g=gran();return r1(Math.floor(capOf(i)/g+1e-6)*g)}
+function hi(i){const g=gran();return r1(Math.ceil(capOf(i)/g-1e-6)*g)}
+const inBand=(i,v)=>v>=lo(i)-1e-9&&v<=hi(i)+1e-9;
+function balanced(){return state.teams.every((t,i)=>inBand(i,sumT(t)))}
+// time com mais nota (em relação à meta) — é com ele que o time mais baixo troca
+function partner(){
+  let best=-1,bv=-Infinity;
+  state.teams.forEach((t,i)=>{const v=sumT(t)-capOf(i);if(v>bv+1e-9){bv=v;best=i}});
+  return best;
+}
+// lista com o time "de cima" quando precisa de troca; vazia quando já está equilibrado
+function overTeams(){return balanced()?[]:[{i:partner()}]}
+// quem escolhe a troca: o time com a menor nota (em relação à meta)
 function chooser(){
   let best=-1,bv=Infinity;
   state.teams.forEach((t,i)=>{const v=sumT(t)-capOf(i);if(v<bv-1e-9){bv=v;best=i}});
   return best;
 }
-// valida troca: a sai do time acima (i) e vai pro time baixo (j); b faz o caminho inverso
+// valida troca: a sai do time de cima (i) e vai pro time de baixo (j); b faz o caminho inverso
 function evalSwap(i,j,a,b){
   const d=P(a).score-P(b).score;const si=sumT(state.teams[i]),sj=sumT(state.teams[j]);
-  const ci=capOf(i),cj=capOf(j),m=state.margin;
-  const ni=si-d,nj=sj+d;
+  const ni=r1(si-d),nj=r1(sj+d);
   let err=null;
-  if(d<=1e-9)err='Assim o time de cima não perde nota. Pegue alguém com nota maior do que quem você manda.';
-  else if(nj>cj+m+1e-9)err=`Seu time ficaria com ${fmt(nj)}, acima do limite de ${fmt(cj+m)}. Pegue alguém com nota menor.`;
-  return {ni,nj,ok:!err&&ni<=ci+m+1e-9,err};
+  if(d<=1e-9)err='Assim nada muda pro seu time. Pegue alguém com nota maior do que quem você manda.';
+  else if(nj>hi(j)+1e-9)err=`Seu time ficaria com ${fmt(nj)}, passando da meta (${bandTxt(j)}). Pegue alguém com nota menor.`;
+  else if(ni<lo(i)-1e-9)err=`O ${teamName(i)} ficaria com ${fmt(ni)}, abaixo da meta (${bandTxt(i)}). Pegue alguém com nota menor.`;
+  let ok=false;
+  if(!err){ok=state.teams.every((t,x)=>inBand(x,x===i?ni:x===j?nj:sumT(t)))}
+  return {ni,nj,ok,err};
 }
+function bandTxt(i){const a=lo(i),b=hi(i);return Math.abs(a-b)<1e-9?fmt(a):fmt(a)+' ou '+fmt(b)}
 function suggestions(i,j){
   const caps=new Set(state.captains);const out=[];
   for(const a of state.teams[i]){if(caps.has(a))continue;
@@ -228,11 +250,11 @@ function setMode(){
 }
 function teamCards(hl){
   return `<div class="teams">${state.teams.map((t,i)=>{
-    const s=sumT(t),c=state.phase==='draft'?capAvg():capOf(i);const over=s>c+state.margin+1e-9;
+    const s=sumT(t),c=state.phase==='draft'?capAvg():capOf(i);const fin=state.phase!=='draft';const over=fin&&s>hi(i)+1e-9;
     const pct=Math.min(100,c?s/c*100:0);
-    const st=state.phase==='draft'?'':(over?'<span class="st">acima</span>':(s<c-1e-9?'<span class="st">abaixo</span>':'<span class="st">ok</span>'));
+    const st=!fin?'':(over?'<span class="st">acima</span>':(s<lo(i)-1e-9?'<span class="st">abaixo</span>':'<span class="st">ok</span>'));
     return `<div class="team ${hl===i?'now':''}">
-      <div class="hd" style="background:${COLORS[i]}"><strong>${esc(teamName(i))}</strong><em>${fmt(s)} / ${fmt(c)} · ${t.length} jog.</em>${st}</div>
+      <div class="hd" style="background:${COLORS[i]}"><strong>${esc(teamName(i))}</strong><em>${fmt(s)} / meta ${fin?bandTxt(i):fmt(c)} · ${t.length} jog.</em>${st}</div>
       <div class="bar"><i class="${over?'over':''}" style="width:${pct}%"></i></div>
       <ol>${t.map(id=>`<li>${id===state.captains[i]?'👑 ':''}${esc(P(id).name)}<span>${fmt(P(id).score)}</span></li>`).join('')}</ol>
     </div>`}).join('')}</div>`;
@@ -309,17 +331,17 @@ function renderSetup(){
       <td style="text-align:right"><button class="del" data-a="del">✕</button></td></tr>`).join('')}</table>
     <div class="stats">
       <div class="stat"><b>${fmt(total())}</b><span>Soma total</span></div>
-      <div class="stat"><b>${fmt(capAvg())}</b><span>Teto por time</span></div>
+      <div class="stat"><b>${fmt(capAvg())}</b><span>Meta por time</span></div>
       <div class="stat"><b>${n%T?Math.floor(n/T)+'–'+Math.ceil(n/T):n/T}</b><span>Jog. por time</span></div>
     </div>
   </div>
   <div class="card">
     <h2>Regras</h2>
-    <div class="opts">
+    <div class="opts" style="grid-template-columns:1fr">
       <div class="opt"><label>Times</label><div class="stepper"><button data-a="nt" data-d="-1">−</button><span>${T}</span><button data-a="nt" data-d="1">+</button></div></div>
-      <div class="opt"><label>Margem acima do teto</label><div class="stepper"><button data-a="mg" data-d="-0.5">−</button><span>${fmt(state.margin)}</span><button data-a="mg" data-d="0.5">+</button></div></div>
+
     </div>
-    <p class="hint">Teto = soma total ÷ ${T} = <b>${fmt(capAvg())}</b>. No fim do draft, se um time passar de <b>${fmt(capAvg()+state.margin)}</b>, o capitão do time com a <b>menor nota</b> escolhe uma troca com ele.</p>
+    <p class="hint">Meta = soma total ÷ ${T} = <b>${fmt(capAvg())}</b>. No fim do draft os times têm que ficar o mais iguais possível: ${n%T===0&&state.players.length?`<b>${(()=>{const g=gran(),a=Math.floor(capAvg()/g+1e-6)*g,b=Math.ceil(capAvg()/g-1e-6)*g;return Math.abs(a-b)<1e-9?'todos com '+fmt(a):'cada um com '+fmt(a)+' ou '+fmt(b)})()}</b>`:'o mais perto possível da meta'}. Se não ficar, o capitão do time com a <b>menor nota</b> escolhe uma troca com o time de nota mais alta.</p>
   </div>
   <div class="card">
     <h2>Capitães <small>${state.captains.length}/${T}</small></h2>
@@ -343,7 +365,7 @@ function renderDraft(){
     <small>${sub}</small>
   </div>
   ${whoBox()}
-  <div class="card"><h2>Times <small>soma / teto</small></h2>${teamCards(ti)}
+  <div class="card"><h2>Times <small>soma / meta</small></h2>${teamCards(ti)}
     <p class="hint">Ordem (snake): ${ordem}, depois volta ao contrário.</p></div>
   <div class="card"><h2>Disponíveis <small>${avail.length}</small></h2>
     <ul class="avail">${avail.map(p=>`<li><span class="nm">${esc(p.name)}</span><span class="pill">${fmt(p.score)}</span>
@@ -357,19 +379,19 @@ function renderTrade(){
   if(!ov.length)return renderDone();
   const i=ov[0].i,j=chooser(),act=canAct(j),mine=seatOf(j)===ME;
   const caps=new Set(state.captains);
-  const si=sumT(state.teams[i]),ci=capOf(i);
+  const si=sumT(state.teams[i]),sj=sumT(state.teams[j]);
   if(selA&&!state.teams[i].includes(selA))selA=null;
   if(selB&&!state.teams[j].includes(selB))selB=null;
   let preview='';
   if(selA&&selB){const r=evalSwap(i,j,selA,selB);
     preview=r.err?`<div class="preview bad">⚠️ ${r.err}</div>`:
-      `<div class="preview ${r.ok?'ok':''}">${esc(teamName(i))} fica com <b>${fmt(r.ni)}</b> · ${mine?'seu time':esc(teamName(j))} fica com <b>${fmt(r.nj)}</b><br>${r.ok?'✅ Resolve: ninguém fica acima do limite.':'Melhora, mas o '+esc(teamName(i))+' ainda fica acima. Vai ter outra troca depois.'}
+      `<div class="preview ${r.ok?'ok':''}">${esc(teamName(i))} fica com <b>${fmt(r.ni)}</b> · ${mine?'seu time':esc(teamName(j))} fica com <b>${fmt(r.nj)}</b><br>${r.ok?'✅ Resolve: todos os times ficam na meta.':'Melhora, mas ainda não equilibra tudo. Vai ter outra troca depois.'}
        <div class="row"><button class="primary grow" data-a="doswap">Confirmar troca</button></div></div>`;
   }
   const sug=act?suggestions(i,j):[];
   return `
   <div class="turn ${mine?'mine':''}" style="background:${COLORS[j]}">
-    <small>Hora da troca · ${esc(teamName(i))} passou do limite (${fmt(si)} / ${fmt(ci+state.margin)})</small>
+    <small>Hora da troca · ${esc(teamName(i))} com ${fmt(si)} e ${esc(teamName(j))} com ${fmt(sj)} · meta ${bandTxt(j)}</small>
     <strong>${mine?'Você escolhe a troca!':esc(P(state.captains[j]).name)+' escolhe a troca'}</strong>
     <small>${mine?'Seu time tem a menor nota: pegue um do '+esc(teamName(i))+' e mande um seu':(act?'Escolhendo pelo '+esc(teamName(j)):'Time com a menor nota escolhe. Aguardando…')}</small>
   </div>
@@ -383,14 +405,14 @@ function renderTrade(){
     ${preview||'<p class="hint">Toque num jogador de cada lado. Capitães não entram na troca.</p>'}
   </div>
   ${sug.length?`<div class="card"><h2>Sugestões <small>toque pra preencher</small></h2>${sug.map(o=>`<div class="sug" data-a="usesug" data-x="${o.a}" data-y="${o.b}"><span class="l">Pega ${esc(P(o.a).name)} (${fmt(P(o.a).score)}) ⇄ manda ${esc(P(o.b).name)} (${fmt(P(o.b).score)})</span>${o.ok?'<span class="tag">resolve</span>':'<span class="tag part">melhora</span>'}</div>`).join('')}</div>`:
-   '<div class="card"><p class="hint" style="margin:0">Nenhuma troca válida entre esses dois times. O organizador pode fechar os times assim.</p></div>'}`:''}
+   '<div class="card"><p class="hint" style="margin:0">Nenhuma troca entre esses dois times deixa tudo mais equilibrado. O organizador pode fechar os times assim.</p></div>'}`:''}
   ${state.trades.length?`<div class="card"><h2>Trocas feitas</h2><ol class="log">${state.trades.map(t=>`<li>${esc(t)}</li>`).join('')}</ol></div>`:''}
   ${isAdmin()?`<div class="row" style="justify-content:space-between">${state.trades.length?'<span></span>':'<button class="ghost wh" data-a="undo">↶ Desfazer última escolha</button>'}<button class="ghost wh" data-a="finish">Fechar times assim</button></div>`:''}`;
 }
 
 function renderDone(){
   return `
-  <div class="turn" style="background:var(--ok)"><small>Draft encerrado</small><strong>Times fechados!</strong><small>${state.trades.length?state.trades.length+' troca'+(state.trades.length>1?'s':''):'Sem trocas'} · margem ${fmt(state.margin)}</small></div>
+  <div class="turn" style="background:var(--ok)"><small>Draft encerrado</small><strong>Times fechados!</strong><small>${state.trades.length?state.trades.length+' troca'+(state.trades.length>1?'s':''):'Sem trocas'}</small></div>
   <div class="card"><h2>Times finais</h2>${teamCards(-1)}</div>
   ${state.trades.length?`<div class="card"><h2>Trocas feitas</h2><ol class="log">${state.trades.map(t=>`<li>${esc(t)}</li>`).join('')}</ol></div>`:''}
   <button class="primary big" data-a="copy">Copiar pro WhatsApp</button>
@@ -466,8 +488,7 @@ document.addEventListener('click',e=>{
     s.seats={};
   });
   else if(a==='nt')commit(s=>{s.nTeams=Math.min(4,Math.max(2,s.nTeams+ +el.dataset.d));s.captains=s.captains.slice(0,s.nTeams);s.seats={}});
-  else if(a==='mg')commit(s=>{s.margin=Math.max(0,Math.round((s.margin+ +el.dataset.d)*10)/10)});
-  else if(a==='drawcap'){if(state.players.length<state.nTeams){toast('Poucos jogadores');return}
+    else if(a==='drawcap'){if(state.players.length<state.nTeams){toast('Poucos jogadores');return}
     commit(s=>{s.captains=shuffle(s.players.map(p=>p.id)).slice(0,s.nTeams);s.seats={}});toast('Capitães sorteados!')}
   else if(a==='start'){ls.set('dp-lastlist',JSON.stringify(state.players));commit(startDraft)}
   else if(a==='seat'){
